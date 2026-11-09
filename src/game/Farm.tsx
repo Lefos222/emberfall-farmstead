@@ -5,6 +5,8 @@ import xpSprout from "@/assets/farm-xp-0.webp";
 import xpGrowing from "@/assets/farm-xp-1.webp";
 import xpRipe from "@/assets/farm-xp-2.webp";
 import farmScene from "@/assets/farm-scene.png";
+import emberCrop from "@/assets/farm-ember.webp";
+import moonCrop from "@/assets/farm-moon.webp";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -27,7 +29,6 @@ import {
   farmProgress,
   farmXp,
   farmXpToNext,
-  goldSeedReward,
   harvestAll,
   harvestSlot,
   heldSeeds,
@@ -36,25 +37,57 @@ import {
   seedCount,
   seedName,
   seedPrice,
-  seedReward,
+  seedGold,
+  seedXp,
+  SEED_KINDS,
   slotsForLevel,
   timeLeft,
   unlockLevelForSlot,
   waitLabel,
-  xpSeedReward,
   type SeedKind,
 } from "./farm";
 
-const cropImages = {
+const cropImages: Record<SeedKind, readonly string[]> = {
   gold: [goldSprout, goldGrowing, goldRipe],
   xp: [xpSprout, xpGrowing, xpRipe],
+  ember: [emberCrop, emberCrop, emberCrop],
+  moon: [moonCrop, moonCrop, moonCrop],
 };
+/** Seeds painted as a single ripe plant grow by scale instead of separate stage art. */
+const STAGE_SCALE: Record<SeedKind, readonly number[]> = {
+  gold: [1, 1, 1],
+  xp: [1, 1, 1],
+  ember: [0.5, 0.78, 1],
+  moon: [0.5, 0.78, 1],
+};
+
+/**
+ * Where each of the 16 painted dirt plots sits on the farm picture, as % of its width/height.
+ * Ordered back row to front row, left to right along each row.
+ */
+const PLOT_SPOTS: readonly [number, number][] = [
+  [56.6, 45.9], [47.6, 49.8], [38.3, 53.7], [27.1, 58.7],
+  [64.9, 51.8], [56.0, 55.8], [46.5, 60.5], [35.4, 65.8],
+  [73.7, 57.4], [64.8, 62.4], [55.2, 67.8], [44.4, 73.6],
+  [82.1, 63.5], [73.9, 69.2], [64.2, 75.2], [53.9, 82.2],
+];
+
+/** One line naming everything a seed pays. */
+function rewardText(kind: SeedKind, tier: number) {
+  const parts: string[] = [];
+  const g = seedGold(kind, tier);
+  const x = seedXp(kind, tier);
+  if (g > 0) parts.push(`${fmt(g)} gold`);
+  if (x > 0) parts.push(`${fmt(x)} Farm XP`);
+  return parts.join(" + ");
+}
 
 /** Shared painted growth stages for the fields, seed picker and shop. */
 export function CropArt({ kind, stage, size = 46 }: { kind: SeedKind; stage: 0 | 1 | 2; size?: number }) {
-  return <img src={cropImages[kind][stage]} alt="" aria-hidden="true" loading="lazy"
+  const scale = STAGE_SCALE[kind]?.[stage] ?? 1;
+  return <img src={(cropImages[kind] ?? cropImages.xp)[stage]} alt="" aria-hidden="true" loading="lazy"
     width={256} height={256} className="object-contain"
-    style={{ width: size, height: size, flexShrink: 0 }} />;
+    style={{ width: size, height: size, flexShrink: 0, transform: `scale(${scale})`, transformOrigin: "50% 90%" }} />;
 }
 
 /** The farm's progress rail: Farm XP toward the next level, or MAX LEVEL at the top. */
@@ -128,13 +161,7 @@ function SeedOption({
       <div className="min-w-0 flex-1">
         <div className="text-sm font-bold">{seedName(kind, tier)}</div>
         <div className="text-[11px] text-muted-foreground">
-          {durationLabel(kind, tier)} · pays{" "}
-          {kind === "gold" ? (
-            <>{fmt(seedReward(kind, tier))} gold</>
-          ) : (
-            <>{fmt(seedReward(kind, tier))} Farm XP</>
-          )}{" "}
-          · held ×{fmt(held)}
+          {durationLabel(kind, tier)} · pays {rewardText(kind, tier)} · held ×{fmt(held)}
         </div>
       </div>
       <Button variant="ghost"
@@ -277,26 +304,25 @@ export function FarmPanel({ onClose }: { onClose: () => void }) {
         </p>
       )}
 
-      <div className="grid items-start gap-3 md:grid-cols-2">
-        <figure className="farm-scene">
-          <img
-            src={farmScene}
-            alt="The farm beneath the blood moon — a fenced field, the barn and the great red Bloodoak"
-            loading="lazy"
-          />
-          <figcaption>The fields by the Campaign Gate, under the Bloodoak</figcaption>
-        </figure>
-        <div className="farm-field grid grid-cols-4 gap-1.5" aria-label="Farm plots">
+      <div className="farm-scene farm-board" aria-label="Farm plots" role="group">
+        <img
+          src={farmScene}
+          alt="The farm beneath the blood moon — a fenced field of sixteen plots, the barn and the great red Bloodoak"
+          width={1679}
+          height={937}
+        />
         {Array.from({ length: FARM_TOTAL_SLOTS }, (_, index) => {
           const locked = index >= unlocked;
           const crop = locked ? null : cropAt(hero, index);
           const ready = !!crop && now >= crop.readyAt;
           const progress = crop ? cropProgress(crop, now) : 0;
           const stage = ready ? 2 : progress >= 0.45 ? 1 : 0;
+          const [x, y] = PLOT_SPOTS[index] ?? [50, 50];
           return (
-            <Button variant="ghost"
+            <button
               key={index}
               type="button"
+              style={{ left: `${x}%`, top: `${y}%` }}
               aria-label={
                 locked
                   ? `Plot ${index + 1} locked — Farm Level ${unlockLevelForSlot(index)} required`
@@ -306,46 +332,43 @@ export function FarmPanel({ onClose }: { onClose: () => void }) {
               }
               disabled={locked || (!!crop && !ready)}
               onClick={() => (crop ? harvest(index) : plant(index))}
-              className={`farm-plot h-auto min-h-20 whitespace-normal relative flex aspect-square flex-col items-center justify-center gap-0.5 p-1 text-center transition ${locked ? "farm-plot-locked" : ready ? "farm-plot-ready anim-pop" : ""}`}
+              className={`farm-spot ${locked ? "farm-spot-locked" : crop ? (ready ? "farm-spot-ready" : "farm-spot-growing") : "farm-spot-empty"}`}
             >
               {locked ? (
-                <span className="flex flex-col items-center gap-0.5 text-muted-foreground">
-                  <Lock className="h-4 w-4" aria-hidden="true" />
-                  <span className="text-[10px] leading-tight">
-                    Farm Lv {unlockLevelForSlot(index)}
-                  </span>
+                <span className="farm-spot-tag">
+                  <Lock className="h-3 w-3" aria-hidden="true" />
+                  Lv {unlockLevelForSlot(index)}
                 </span>
               ) : crop ? (
                 <>
-                  <CropArt kind={crop.kind} stage={stage as 0 | 1 | 2} size={44} />
-                  {ready ? (
-                    <span className="font-display text-[11px] font-bold text-r1">HARVEST</span>
-                  ) : (
-                    <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                      <Timer className="h-2.5 w-2.5" />
-                      {timeLeft(crop, now)}
+                  <span className="farm-spot-crop">
+                    <CropArt kind={crop.kind} stage={stage as 0 | 1 | 2} size={64} />
+                  </span>
+                  <span className={`farm-spot-tag ${ready ? "farm-spot-tag-ready" : ""}`}>
+                    {ready ? (
+                      "HARVEST"
+                    ) : (
+                      <>
+                        <Timer className="h-2.5 w-2.5" aria-hidden="true" />
+                        {timeLeft(crop, now)}
+                      </>
+                    )}
+                  </span>
+                  {!ready && (
+                    <span className="farm-spot-bar">
+                      <span style={{ width: `${Math.round(progress * 100)}%` }} />
                     </span>
                   )}
-                  <span className="text-[9px] text-muted-foreground">
-                    Lv {crop.tier} {crop.kind === "gold" ? "gold" : "XP"}
-                  </span>
                 </>
               ) : (
-                <span className="flex flex-col items-center gap-1 text-muted-foreground">
-                  <Sprout className="h-5 w-5" aria-hidden="true" />
-                  <span className="text-[10px] font-display">Plant</span>
+                <span className="farm-spot-tag farm-spot-tag-plant">
+                  <Sprout className="h-3 w-3" aria-hidden="true" />
+                  Plant
                 </span>
               )}
-              {crop && !ready && (
-                <span
-                  className="farm-plot-progress"
-                  style={{ width: `${Math.round(progress * 100)}%` }}
-                />
-              )}
-            </Button>
+            </button>
           );
         })}
-        </div>
       </div>
 
       <section className="farm-tree slot mt-3 flex flex-wrap items-center gap-3 p-3">
@@ -419,8 +442,8 @@ export function FarmPanel({ onClose }: { onClose: () => void }) {
             Farm Shop
           </div>
           <p className="mb-2 text-xs text-muted-foreground">
-            Gold Seeds pay gold when harvested; XP Seeds pay Farm XP and are the only way to level
-            the Farm. Higher tiers unlock as the Farm grows.
+            Gold Seeds pay gold, XP Seeds pay Farm XP, Emberbloom pays a little of both and the slow
+            Moonroot pays a big share of Farm XP. Higher tiers unlock as the Farm grows.
           </p>
           <div className="flex flex-wrap gap-1.5">
             <Button variant="ghost" className="btn-ghost px-2 py-1 text-xs" onClick={() => buy("gold", level, 1)}>
@@ -430,6 +453,14 @@ export function FarmPanel({ onClose }: { onClose: () => void }) {
             <Button variant="ghost" className="btn-ghost px-2 py-1 text-xs" onClick={() => buy("xp", level, 1)}>
               <Sparkles className="mr-1 inline h-3.5 w-3.5" />
               XP Seed Lv {level} · <Gold n={seedPrice("xp", level)} />
+            </Button>
+            <Button variant="ghost" className="btn-ghost px-2 py-1 text-xs" onClick={() => buy("ember", level, 1)}>
+              <Sprout className="mr-1 inline h-3.5 w-3.5" />
+              Emberbloom Lv {level} · <Gold n={seedPrice("ember", level)} />
+            </Button>
+            <Button variant="ghost" className="btn-ghost px-2 py-1 text-xs" onClick={() => buy("moon", level, 1)}>
+              <Sparkles className="mr-1 inline h-3.5 w-3.5" />
+              Moonroot Lv {level} · <Gold n={seedPrice("moon", level)} />
             </Button>
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
@@ -444,26 +475,19 @@ export function FarmPanel({ onClose }: { onClose: () => void }) {
             <div className="space-y-1.5">
               {Array.from({ length: level }, (_, i) => level - i).map((tier) => (
                 <div key={`t${tier}`} className="space-y-1.5">
-                  <SeedOption
-                    hero={hero}
-                    slot={pickSlot ?? 0}
-                    kind="gold"
-                    tier={tier}
-                    onDone={(m, bad) => {
-                      say(m, bad);
-                      if (!bad) setPickSlot(null);
-                    }}
-                  />
-                  <SeedOption
-                    hero={hero}
-                    slot={pickSlot ?? 0}
-                    kind="xp"
-                    tier={tier}
-                    onDone={(m, bad) => {
-                      say(m, bad);
-                      if (!bad) setPickSlot(null);
-                    }}
-                  />
+                  {SEED_KINDS.map((kind) => (
+                    <SeedOption
+                      key={kind}
+                      hero={hero}
+                      slot={pickSlot ?? 0}
+                      kind={kind}
+                      tier={tier}
+                      onDone={(m, bad) => {
+                        say(m, bad);
+                        if (!bad) setPickSlot(null);
+                      }}
+                    />
+                  ))}
                 </div>
               ))}
             </div>
@@ -511,7 +535,7 @@ export function FarmShopTab({ hero }: { hero: Hero }) {
   const section = (kind: SeedKind, title: string, blurb: string) => (
     <section className="mt-4">
       <div className="mb-1 flex items-center gap-2 font-display text-sm text-gold">
-        {kind === "gold" ? <Wheat className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+        {kind === "gold" ? <Wheat className="h-4 w-4" /> : kind === "ember" ? <Sprout className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
         {title}
       </div>
       <p className="mb-2 text-xs text-muted-foreground">{blurb}</p>
@@ -520,7 +544,6 @@ export function FarmShopTab({ hero }: { hero: Hero }) {
           const locked = tier > level;
           const price = seedPrice(kind, tier);
           const held = seedCount(hero, kind, tier);
-          const reward = kind === "gold" ? goldSeedReward(tier) : xpSeedReward(tier);
           return (
             <article
               key={tier}
@@ -532,12 +555,7 @@ export function FarmShopTab({ hero }: { hero: Hero }) {
                 {durationLabel(kind, tier)} · Lv {tier} Farm
               </div>
               <div className="text-[10px]">
-                Pays{" "}
-                {kind === "gold" ? (
-                  <b className="text-gold">{fmt(reward)} gold</b>
-                ) : (
-                  <b className="text-void">{fmt(reward)} XP</b>
-                )}
+                Pays <b className="text-gold">{rewardText(kind, tier)}</b>
               </div>
               <div className="text-[10px] text-muted-foreground">Held ×{fmt(held)}</div>
               {locked ? (
@@ -574,7 +592,7 @@ export function FarmShopTab({ hero }: { hero: Hero }) {
   return (
     <div>
       <p className="text-xs text-muted-foreground">
-        Seeds for the fields by the Campaign Gate. Gold Seeds grow gold; XP Seeds grow Farm XP,
+        Seeds for the fields by the Campaign Gate. Gold Seeds grow gold; XP, Emberbloom and Moonroot Seeds grow Farm XP,
         which raises the Farm Level and tills one more plot each time. Seeds unlock as the Farm
         grows and keep in your pouch until planted.
       </p>
@@ -591,7 +609,17 @@ export function FarmShopTab({ hero }: { hero: Hero }) {
       {section(
         "xp",
         "XP Seeds",
-        "Paid in gold, and the only source of Farm XP. Each harvest pays a share of a Farm Level — never a whole one.",
+        "Paid in gold, and they pay Farm XP. Each harvest pays a share of a Farm Level — never a whole one.",
+      )}
+      {section(
+        "ember",
+        "Emberbloom Seeds",
+        "A fiery flower that pays both gold and Farm XP, at the cost of a longer grow.",
+      )}
+      {section(
+        "moon",
+        "Moonroot Seeds",
+        "The slow seed: three times as long as an XP Seed, but more than double its Farm XP.",
       )}
       <p className="mt-4 text-[11px] text-muted-foreground">
         Farm Level {level} of {FARM_MAX_LEVEL} · seeds up to Lv {level} are available.
