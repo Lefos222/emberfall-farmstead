@@ -1,0 +1,153 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792303474510,
+      "tag": "0000_game_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792308065819,
+      "tag": "0001_stage5_expansion",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792322116896,
+      "tag": "0002_probe_connectivity",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792322214677,
+      "tag": "0003_restore_game_functions",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792324991685,
+      "tag": "0004_timed_profession_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792325219685,
+      "tag": "0005_gathering_input_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792329378810,
+      "tag": "0006_premium_diamonds_vip",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792359257303,
+      "tag": "0007_auction_house",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792567303354,
+      "tag": "0008_guild_supply_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792756217814,
+      "tag": "0009_six_daily_profession_quests",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793015417814,
+      "tag": "0010_greek_daily_quests",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793015417815,
+      "tag": "0011_world_map_raids",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793100000000,
+      "tag": "0012_world_raid_allowances",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793200000000,
+      "tag": "0013_auction_anything",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793300000000,
+      "tag": "0014_guild_applications",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1793300000001,
+      "tag": "0015_world_raid_claims_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793300000002,
+      "tag": "0016_auction_resource_merge_and_withdraw_owner",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793300000003,
+      "tag": "0017_friend_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793300000004,
+      "tag": "0018_gem_chart",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793300000005,
+      "tag": "0019_guild_supply_no_ancestral_beacon",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793954601628,
+      "tag": "0020_friend_requests_live",
+      "breakpoints": true
+    }
+  ]
+}
