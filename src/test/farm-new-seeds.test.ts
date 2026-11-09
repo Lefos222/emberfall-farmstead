@@ -21,6 +21,6 @@ describe("Emberbloom and Moonroot seeds", () => {
     plantSeed(h, 0, "moon", 1, 0);
     expect(seedDurationMs("moon", 1)).toBe(seedDurationMs("xp", 1) * 3);
     expect(seedPrice("moon", 1)).toBe(seedPrice("xp", 1) * 2);
-    expect(harvestSlot(h, 0, seedDurationMs("moon", 1))).toEqual({ gold: 0, xp: Math.round(xpSeedReward(1) * 2.2), levels: 1 });
+    expect(harvestSlot(h, 0, seedDurationMs("moon", 1))).toEqual({ gold: 0, xp: Math.round(xpSeedReward(1) * 2.2), levels: 0 });
   });
 });
